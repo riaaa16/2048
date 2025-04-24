@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2048</title>
+
+    <style>
+        html, body {
+            box-sizing: border-box;
+        }
+        .container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 98svh;
+            margin: 0;
+            padding: 0;
+        }
+        [id="2048"] {
+            display: grid;
+            height: 30em;
+            width: 30em;
+            gap: 0.75em;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr 1fr;
+            place-content: center;
+            background-color: #9b8776;
+            /*Rounded border*/
+            border: 0.75em solid #9b8776;
+            border-radius: 0.75em;
+        }
+        [id="2048"] > div {
+            /*Font*/
+            font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+            font-weight: bold;
+            font-size: 2.5em;
+            color: white;
+            /*To make boxes fill*/
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            /*To center text*/
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /*Rounded border*/
+            background-color: #bdac97;
+            border-width: 0;
+            border-radius: 0.25em;
+        }
+        /*Darker fonts for #2 and #4*/
+        [id="2048"] > :is(.\32, .\34) {
+            color: #756452;
+        }
+        /*Colors for each number*/
+        [id="2048"] > :is(.\32) {
+            background-color: #eee4da;
+        }
+        [id="2048"] > :is(.\34) {
+            background-color: #ebd8b6;
+        }
+        [id="2048"] > :is(.\38) {
+            background-color: #f2b075;
+        }
+        [id="2048"] > :is(.\31\36) {
+            background-color: #f58f5d;
+        }
+        [id="2048"] > :is(.\33\32) {
+            background-color: #f47658;
+        }
+        [id="2048"] > :is(.\36\34) {
+            background-color: #f55a36;
+        }
+        [id="2048"] > :is(.\31\32\38, .\32\35\36, .\35\31\32, .\31\30\32\34, .\32\30\34\38) {
+            background-color: #f2cf54;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="2048">
+            <div></div>
+            <div></div>
+            <div></div>  
+            <div></div>
+            <div></div>
+            <div></div>  
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div> 
+            <div></div>
+            <div></div>
+        </div>
+    </div>
+</body>
+<script>
+    window.addEventListener("keydown", (e) => {
+        if (event.key === "ArrowUp") {
+            e.preventDefault();
+            randomTile();
+        } else if (event.key === "ArrowDown") {
+            e.preventDefault();
+            randomTile();
+        } else if (event.key === "ArrowLeft") {
+            e.preventDefault();
+            randomTile();
+        } else if (event.key === "ArrowRight") {
+            e.preventDefault();
+            randomTile();
+        }
+    });
+
+    const container = document.getElementById("2048");
+
+    // Each div collected in an array has 16 elements
+    // 0 - 15
+
+    function randomTile() {
+        // Select all children of 2048
+        const children = container.children
+
+        // Convert HTML collection to array -> filter for empty divs
+        const empty = Array.from(children).filter(div => div.innerText === "");
+
+        if (empty.length === 0) return; // If no empty divs, return
+
+        // Select a random empty div
+        const randomDiv = empty[Math.floor(Math.random() * empty.length)];
+        // If random number is less than 0.9, set number 2, else set to 4
+        const number = Math.random() < 0.9 ? 2 : 4;
+        randomDiv.innerText = number; // Set innerText
+        randomDiv.className = number; // Set class name
+    }
+
+    // Start with 2 random tiles
+    randomTile();
+    randomTile();
+</script>
+</html>
