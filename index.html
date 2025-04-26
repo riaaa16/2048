@@ -127,7 +127,6 @@
         if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
             e.preventDefault(); // Prevent default scrolling behavior
             move(e.key); // Call move function with appropriate direction
-            randomTile(); // Add new tile after moving
         }
     });
 
@@ -160,7 +159,7 @@
     function move(direction) {
         const row = direction === "ArrowLeft" || direction === "ArrowRight";
         const reverse = direction === "ArrowRight" || direction === "ArrowDown";
-
+        let noMoves = true;
         for (let i = 0; i < 4 ; i++) {
             let line = [];
 
@@ -181,10 +180,16 @@
                 // if LR = GRID[ROW][COL]
                 // else if UD = GRID[COL][ROW]
                 let tile = row ? GRID[i][j] : GRID[j][i];
-                changeTile(tile, newLine[j]); // Update tile values
+                 // Update tile values if they are different
+                if (tile.innerText != newLine[j]) {
+                    changeTile(tile, newLine[j]);
+                    noMoves = false; // Set noMoves to false
+                };
             }
 
         }
+        if (noMoves) return; // If no moves were made, return
+        randomTile(); // Add new tile after moving
     }
 
     function slideAndMerge(line) {
