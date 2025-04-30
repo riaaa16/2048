@@ -5,7 +5,7 @@ const SCORE = document.getElementById("score");
 const BEST = document.getElementById("best");
 
 const CONFETTI = new JSConfetti();
-const WIN = 16;
+const WIN = 2048;
 
 let score = 0;
 let best = Number(localStorage.getItem("bestScore")) || 0;
