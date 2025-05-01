@@ -11,12 +11,26 @@ let score = 0;
 let best = Number(localStorage.getItem("bestScore")) || 0;
 let won = false;
 
+let swipeStartHandler, swipeEndHandler, keydownHandler;
+
 const GRID = new Array(4); // Create 4x4 array
 
+// --- Utility Functions ---
 function syncHeaderWidth() {
     HEADER.style.width = `${GAME.getBoundingClientRect().width}px`;
 }
 
+function getTiles() {
+    const children = GAME.children // Select all children of 2048
+    const tiles = Array.from(children); // Convert HTML collection to array
+    return tiles;
+}
+
+function isGridFull() {
+    return ( getTiles().filter(val => val.innerText).length === 16 );
+}
+
+// --- Score Functions ---
 function updateScore(num) {
     score += num; // Add to score
     SCORE.innerText = score; // Update score display
@@ -34,66 +48,18 @@ function resetScore() {
     BEST.innerText = best;
 }
 
-function init(restart = false) {
-    resetScore(); // Reset score
+// --- Tile/Board Functions ---
+function changeTile(div, num, isNew = false) {
+    div.innerText = num; // Set innerText
+    div.className = num; // Set class name
 
-    if (!restart) {
-        // Adding divs to container and GRID
-        for (let row = 0; row < GRID.length; row++) {
-            GRID[row] = [];
-            for (col = 0 ; col < 4; col++) {
-                const div = document.createElement("div"); // Create div
-                GRID[row][col] = div; // Add div to GRID
-                GAME.appendChild(div); // Add div to container
-            }
-        }
-
-        // Add event listener to restart game
-        RESTART.addEventListener("click", () => init(true));
-
-        // Sync after window load
-        window.addEventListener("load", () => {
-            syncHeaderWidth();
-            setTimeout(syncHeaderWidth, 100);
-        });
-
-        // Sync on resize
-        window.addEventListener("resize", syncHeaderWidth);
-
-    } else { // Restart logic
-        // Clear tiles
-        const tiles = getTiles();
-        tiles.forEach(tile => { changeTile(tile, ""); });
-        // Reset won
-        won = false;
+    if (isNew) {
+        div.classList.add("new"); // Add new class to animate
+    } else if (num === WIN) {
+        win();
     }
 
-    // Add event listener for arrow key movements to play
-    window.addEventListener("keydown", play);
-
-    // Start with 2 random tiles)
-    randomTile();
-    randomTile();
-
 }
-
-function play(e) {
-    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
-        e.preventDefault(); // Prevent default scrolling behavior
-        move(e.key); // Call move function with appropriate direction
-    }
-}
-
-function getTiles() {
-    const children = GAME.children // Select all children of 2048
-    const tiles = Array.from(children); // Convert HTML collection to array
-    return tiles;
-}
-
-function isGridFull() {
-    return ( getTiles().filter(val => val.innerText).length === 16 );
-}
-
 function randomTile() {
     const empty = getTiles().filter(div => div.innerText === ""); // Filter for empty divs
     if (empty.length === 0) return; // If no empty divs, return
@@ -107,16 +73,21 @@ function randomTile() {
     if (isGridFull()) { checkGame() };
 }
 
-function changeTile(div, num, isNew = false) {
-    div.innerText = num; // Set innerText
-    div.className = num; // Set class name
+function slideAndMerge(line) {
+    let newLine = line.filter(val => val); // Remove blanks
 
-    if (isNew) {
-        div.classList.add("new"); // Add new class to animate
-    } else if (num === WIN) {
-        win();
+    for (let i = 0 ; i < newLine.length - 1; i++) { // Iterate through array
+        if (newLine[i] === newLine[i + 1]) { // If values are the same, merge
+            newLine[i]*=2; // Double first value
+            newLine[i + 1] = ""; // Empty second value
+            updateScore(newLine[i]); // Update score
+        }
     }
 
+    newLine = newLine.filter(val => val); // Filter again to get rid of spaces inbetween
+    while (newLine.length < 4) newLine.push(""); // Add empty tiles to make array length 4
+
+    return newLine;
 }
 
 function move(direction) {
@@ -165,23 +136,7 @@ function move(direction) {
     randomTile(); // Add new tile if game hasn't ended and moves are available
 }
 
-function slideAndMerge(line) {
-    let newLine = line.filter(val => val); // Remove blanks
-
-    for (let i = 0 ; i < newLine.length - 1; i++) { // Iterate through array
-        if (newLine[i] === newLine[i + 1]) { // If values are the same, merge
-            newLine[i]*=2; // Double first value
-            newLine[i + 1] = ""; // Empty second value
-            updateScore(newLine[i]); // Update score
-        }
-    }
-
-    newLine = newLine.filter(val => val); // Filter again to get rid of spaces inbetween
-    while (newLine.length < 4) newLine.push(""); // Add empty tiles to make array length 4
-
-    return newLine;
-}
-
+// --- Game State Functions ---
 function checkGame() {
     let gameOver = true;
 
@@ -209,24 +164,117 @@ function checkGame() {
 function win() {
     if (!won) {
         // Winners get nerd emoji-attacked
-        CONFETTI.addConfetti({
-            emojis: ['🤓'],
-            emojiSize: 75,
-        });
+        CONFETTI.addConfetti({ emojis: ['🤓'], emojiSize: 75 });
         won = true; // Set won to true
     }
 }
 
 function endGame() {
-    // GAME_OVER.classList.remove("hide"); // Show game over message
-    window.removeEventListener("keydown", play); // Remove event listener for keydown
-
+    // Remove event listeners to disable unnecessary input
+    window.removeEventListener("keydown", play);
+    removeSwipeListener();
     // Losers get pensive emoji-attacked
-    CONFETTI.addConfetti({
-        emojis: ['😔'],
-        emojiSize: 75,
-    });
+    CONFETTI.addConfetti({ emojis: ['😔'], emojiSize: 75 });
 }
 
-// Start game
+// --- Input Functions ---
+function play(e) {
+    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        e.preventDefault(); // Prevent default scrolling behavior
+        move(e.key); // Call move function with appropriate direction
+    }
+}
+
+function addSwipeListener() {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+
+    swipeStartHandler = function (e) {
+        if (e.touches.length > 0) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }
+    };
+
+    swipeEndHandler = function (e) {
+        if (e.changedTouches.length > 0) {
+            touchEndX = e.changedTouches[0].clientX;
+            touchEndY = e.changedTouches[0].clientY;
+
+            const dx = touchEndX - touchStartX;
+            const dy = touchEndY - touchStartY;
+
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (dx > 30) {
+                    play({ key: "ArrowRight", preventDefault: () => {} });
+                } else if (dx < -30) {
+                    play({ key: "ArrowLeft", preventDefault: () => {} });
+                }
+            } else {
+                if (dy > 30) {
+                    play({ key: "ArrowDown", preventDefault: () => {} });
+                } else if (dy < -30) {
+                    play({ key: "ArrowUp", preventDefault: () => {} });
+                }
+            }
+        }
+    };
+
+    window.addEventListener("touchstart", swipeStartHandler);
+    window.addEventListener("touchend", swipeEndHandler);
+    keydownHandler = play;
+    window.addEventListener("keydown", keydownHandler);
+}
+
+function removeSwipeListener() {
+    if (swipeStartHandler) window.removeEventListener("touchstart", swipeStartHandler);
+    if (swipeEndHandler) window.removeEventListener("touchend", swipeEndHandler);
+    if (keydownHandler) window.removeEventListener("keydown", keydownHandler);
+}
+
+// --- Initialization ---
+function init(restart = false) { // Handles initializing game and restarts
+    resetScore(); // Reset score
+
+    if (!restart) {
+        // Adding divs to container and GRID
+        for (let row = 0; row < GRID.length; row++) {
+            GRID[row] = [];
+            for (col = 0 ; col < 4; col++) {
+                const div = document.createElement("div"); // Create div
+                GRID[row][col] = div; // Add div to GRID
+                GAME.appendChild(div); // Add div to container
+            }
+        }
+
+        // Add event listeners
+        RESTART.addEventListener("click", () => init(true)); // For restart
+        window.addEventListener("load", () => { // To sync header width on load
+            syncHeaderWidth();
+            setTimeout(syncHeaderWidth, 100);
+        });
+        window.addEventListener("resize", syncHeaderWidth); // To sync header witdh on resize
+
+    } else { // Restart logic
+        // Clear tiles
+        const tiles = getTiles();
+        tiles.forEach(tile => { changeTile(tile, ""); });
+        // Reset won
+        won = false;
+    }
+
+    // Add event listener to play
+    window.addEventListener("keydown", play);
+    addSwipeListener(); // For swipe events
+
+
+    // Start with 2 random tiles)
+    randomTile();
+    randomTile();
+
+}
+
+// --- Start Game ---
 init();
