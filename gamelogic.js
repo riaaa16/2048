@@ -126,7 +126,6 @@ function move(direction) {
                 changeTile(tile, newLine[j]);
             };
         }
-
     }
 
     randomTile(); // Add new tile if game hasn't ended and moves are available
