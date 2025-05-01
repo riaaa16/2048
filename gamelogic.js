@@ -7,6 +7,7 @@ const BEST = document.getElementById("best");
 const CONFETTI = new JSConfetti();
 const WIN = 2048;
 
+let values = JSON.parse(localStorage.getItem("values")) || new Array(16).fill("");
 let score = 0;
 let best = Number(localStorage.getItem("bestScore")) || 0;
 let won = false;
@@ -24,6 +25,16 @@ function getTiles() {
     const children = GAME.children // Select all children of 2048
     const tiles = Array.from(children); // Convert HTML collection to array
     return tiles;
+}
+
+function saveValues() {
+    values = getTiles().map(val => val.innerText || "");
+    localStorage.setItem("values", JSON.stringify(values));
+}
+
+function isValuesEmpty() {
+    const values = JSON.parse(localStorage.getItem("values")) || new Array(16).fill("");
+    return values.every(val => val === ""); // Check if all values are empty
 }
 
 function isGridFull() {
@@ -49,17 +60,16 @@ function resetScore() {
 }
 
 // --- Tile/Board Functions ---
-function changeTile(div, num, isNew = false) {
+function changeTile(div, num, isNew = false, save = true) {
     div.innerText = num; // Set innerText
     div.className = num; // Set class name
 
-    if (isNew) {
-        div.classList.add("new"); // Add new class to animate
-    } else if (num === WIN) {
-        win();
-    }
-
+    if (isNew) div.classList.add("new"); // Animate new tiles
+    if (num === WIN) win(); // Call win() if tile meets win condition
+    if (isGridFull()) checkGame(); // Check grid & game state
+    if (save) saveValues(); // Save values
 }
+
 function randomTile() {
     const empty = getTiles().filter(div => div.innerText === ""); // Filter for empty divs
     if (empty.length === 0) return; // If no empty divs, return
@@ -68,9 +78,6 @@ function randomTile() {
     const number = Math.random() < 0.9 ? 2 : 4; // If random number is less than 0.9, set number 2, else set to 4
 
     changeTile(randomDiv, number, true); // Change tile to random number
-
-    // If grid full, check for game over
-    if (isGridFull()) { checkGame() };
 }
 
 function slideAndMerge(line) {
@@ -93,7 +100,6 @@ function slideAndMerge(line) {
 function move(direction) {
     const row = direction === "ArrowLeft" || direction === "ArrowRight";
     const reverse = direction === "ArrowRight" || direction === "ArrowDown";
-    let noMoves = true;
 
     for (let i = 0; i < 4 ; i++) {
         let line = [];
@@ -118,19 +124,9 @@ function move(direction) {
              // Update tile values if they are different
             if (tile.innerText != newLine[j]) {
                 changeTile(tile, newLine[j]);
-                noMoves = false; // Set noMoves to false
             };
         }
 
-    }
-
-    // If no moves can be made
-    if (noMoves) {
-        // If grid is full, check for game over
-        if (isGridFull()) {
-            checkGame();
-        }
-        return;
     }
 
     randomTile(); // Add new tile if game hasn't ended and moves are available
@@ -238,14 +234,21 @@ function removeSwipeListener() {
 function init(restart = false) { // Handles initializing game and restarts
     resetScore(); // Reset score
 
-    if (!restart) {
-        // Adding divs to container and GRID
+    if (!restart) { // Initialization logic
         for (let row = 0; row < GRID.length; row++) {
             GRID[row] = [];
-            for (col = 0 ; col < 4; col++) {
-                const div = document.createElement("div"); // Create div
-                GRID[row][col] = div; // Add div to GRID
-                GAME.appendChild(div); // Add div to container
+            for (let col = 0 ; col < 4; col++) {
+                // Creating divs
+                const div = document.createElement("div");
+                GRID[row][col] = div;
+                GAME.appendChild(div);
+
+                // Loading pre-existing tiles
+                if (!isValuesEmpty()) {
+                    const index = row * 4 + col;
+                    const val = values[index];
+                    changeTile(GRID[row][col], val, true, false);
+                }
             }
         }
 
@@ -261,19 +264,20 @@ function init(restart = false) { // Handles initializing game and restarts
         // Clear tiles
         const tiles = getTiles();
         tiles.forEach(tile => { changeTile(tile, ""); });
-        // Reset won
-        won = false;
+        won = false; // Reset flag
     }
 
     // Add event listener to play
     window.addEventListener("keydown", play);
     addSwipeListener(); // For swipe events
 
+    // Start with 2 random tiles if there are no values saved
+    if (isValuesEmpty()) {
+        randomTile();
+        randomTile();
+    }
 
-    // Start with 2 random tiles)
-    randomTile();
-    randomTile();
-
+    saveValues();
 }
 
 // --- Start Game ---
