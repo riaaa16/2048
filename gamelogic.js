@@ -66,7 +66,6 @@ function changeTile(div, num, isNew = false, save = true) {
 
     if (isNew) div.classList.add("new"); // Animate new tiles
     if (num === WIN) win(); // Call win() if tile meets win condition
-    if (isGridFull()) checkGame(); // Check grid & game state
     if (save) saveValues(); // Save values
 }
 
@@ -100,6 +99,7 @@ function slideAndMerge(line) {
 function move(direction) {
     const row = direction === "ArrowLeft" || direction === "ArrowRight";
     const reverse = direction === "ArrowRight" || direction === "ArrowDown";
+    let noMoves = true;
 
     for (let i = 0; i < 4 ; i++) {
         let line = [];
@@ -124,36 +124,47 @@ function move(direction) {
              // Update tile values if they are different
             if (tile.innerText != newLine[j]) {
                 changeTile(tile, newLine[j]);
-            };
+                noMoves = false; // Set noMoves to false
+            }
         }
+    }
+
+    // If no moves can be made
+    if (noMoves) {
+        // If grid is full, check for game over
+        if (isGridFull()) {
+            checkGame();
+        }
+        return;
     }
 
     randomTile(); // Add new tile if game hasn't ended and moves are available
 }
 
-// --- Game State Functions ---
+// --- 
+//  State Functions ---
 function checkGame() {
-    let gameOver = true;
+    // Check for win first
+    if (getTiles().filter(val => parseInt(val.innerText) === WIN).length > 0) {
+        win();
+    }
 
     for (let row = 0; row <= 3; row++) {
         for (let col = 0; col <= 3; col++) {
             let current = GRID[row][col].innerText;
+            if (current === "") return; // Empty tile, moves are possible
             // Check right neighbor
             if (col <= 2 && current === GRID[row][col + 1].innerText) {
-                gameOver = false;
+                return;
             }
             // Check bottom neighbor
             if (row <= 2 && current === GRID[row + 1][col].innerText) {
-                gameOver = false;
+                return;
             }
         }
     }
 
-    if (gameOver) {
-        endGame();
-    } else if (getTiles().filter(val => parseInt(val.innerText) === WIN).length > 0) {
-        win();
-    }
+    endGame();
 }
 
 function win() {
@@ -257,7 +268,7 @@ function init(restart = false) { // Handles initializing game and restarts
             syncHeaderWidth();
             setTimeout(syncHeaderWidth, 100);
         });
-        window.addEventListener("resize", syncHeaderWidth); // To sync header witdh on resize
+        window.addEventListener("resize", syncHeaderWidth); // To sync header width on resize
 
     } else { // Restart logic
         // Clear tiles
@@ -276,6 +287,7 @@ function init(restart = false) { // Handles initializing game and restarts
         randomTile();
     }
 
+    checkGame(); // Check game state
     saveValues();
 }
 
